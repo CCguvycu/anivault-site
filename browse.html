@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse — AniVault</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-logo">⬡ AniVault</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="watchlist.html">Watchlist</a>
+  </div>
+  <div class="nav-search">
+    <span>🔍</span>
+    <input type="text" id="navSearch" placeholder="Search anime…" autocomplete="off">
+  </div>
+</nav>
+
+<div class="grid-page">
+  <div class="page-header">
+    <h1 id="pageTitle">Browse Anime</h1>
+    <p id="pageSubtitle">3,266 anime in the database — search, filter, and stream</p>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <span class="filter-label">Search</span>
+    <input type="text" id="searchInput" placeholder="Title, genre…" style="min-width:180px">
+
+    <span class="filter-label">Genre</span>
+    <select id="genreFilter">
+      <option value="">All Genres</option>
+      <option>Action</option><option>Adventure</option><option>Comedy</option>
+      <option>Drama</option><option>Fantasy</option><option>Horror</option>
+      <option>Mecha</option><option>Music</option><option>Mystery</option>
+      <option>Psychological</option><option>Romance</option><option>Sci-Fi</option>
+      <option>Slice of Life</option><option>Sports</option><option>Supernatural</option>
+      <option>Thriller</option>
+    </select>
+
+    <span class="filter-label">Year</span>
+    <select id="yearFilter">
+      <option value="">Any Year</option>
+    </select>
+
+    <span class="filter-label">Format</span>
+    <select id="fmtFilter">
+      <option value="">All Formats</option>
+      <option value="TV">TV</option>
+      <option value="MOVIE">Movie</option>
+      <option value="OVA">OVA</option>
+      <option value="ONA">ONA</option>
+      <option value="SPECIAL">Special</option>
+    </select>
+
+    <span class="filter-label">Status</span>
+    <select id="statusFilter">
+      <option value="">Any Status</option>
+      <option value="RELEASING">Airing</option>
+      <option value="FINISHED">Finished</option>
+      <option value="NOT_YET_RELEASED">Upcoming</option>
+    </select>
+
+    <span class="filter-label">Sort</span>
+    <select id="sortFilter">
+      <option value="POPULARITY_DESC">Most Popular</option>
+      <option value="TRENDING_DESC">Trending</option>
+      <option value="SCORE_DESC">Top Rated</option>
+      <option value="START_DATE_DESC">Newest</option>
+      <option value="TITLE_ROMAJI">A-Z</option>
+    </select>
+
+    <div class="filter-sep"></div>
+    <button class="btn-load" onclick="resetAndFetch()">Apply</button>
+    <span class="filter-count" id="resultCount"></span>
+  </div>
+
+  <!-- Mode toggle: DB mode vs API mode -->
+  <div style="display:flex;gap:.5rem;margin-bottom:1rem;align-items:center">
+    <span style="font-size:.85rem;color:var(--dim)">Mode:</span>
+    <button class="src-btn active" id="btnDb" onclick="setMode('db')">📦 Database (3,266)</button>
+    <button class="src-btn" id="btnApi" onclick="setMode('api')">🌐 AniList Live</button>
+  </div>
+
+  <div id="loadingState" style="display:none;justify-content:center;padding:1rem">
+    <div class="spinner"></div>
+  </div>
+
+  <div class="anime-grid" id="grid"></div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+    <button class="btn-load" id="loadMoreBtn" onclick="loadMore()">Load More</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let mode = 'db';         // 'db' | 'api'
+let dbIds = [];          // all 3266 AniList IDs
+let dbPage = 0;          // current batch index for db mode
+const DB_BATCH = 50;     // IDs per batch
+
+let apiPage = 1;
+let apiHasMore = false;
+
+let fetchTimer;
+
+// ── Year options ─────────────────────────────
+(function buildYears() {
+  const sel = document.getElementById('yearFilter');
+  for (let y = new Date().getFullYear(); y >= 1960; y--) {
+    const o = document.createElement('option');
+    o.value = o.textContent = y;
+    sel.append(o);
+  }
+})();
+
+// ── URL param pre-fill ───────────────────────
+(function prefill() {
+  const q = P.get('q'), g = P.get('genre'), s = P.get('sort');
+  if (q) { document.getElementById('searchInput').value = q; document.getElementById('pageTitle').textContent = `Results for "${q}"`; }
+  if (g) { document.getElementById('genreFilter').value = g; document.getElementById('pageTitle').textContent = g + ' Anime'; }
+  if (s) document.getElementById('sortFilter').value = s;
+})();
+
+// ── Nav search ───────────────────────────────
+document.getElementById('navSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim())
+    P.go('browse.html', { q: e.target.value.trim() });
+});
+
+// ── Live search ──────────────────────────────
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(fetchTimer);
+  fetchTimer = setTimeout(() => resetAndFetch(), 600);
+});
+
+// ── Mode switch ──────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnDb').classList.toggle('active', m === 'db');
+  document.getElementById('btnApi').classList.toggle('active', m === 'api');
+  resetAndFetch();
+}
+
+// ── Reset + fetch ────────────────────────────
+function resetAndFetch() {
+  document.getElementById('grid').innerHTML = '';
+  dbPage = 0; apiPage = 1; apiHasMore = false;
+  document.getElementById('loadMoreWrap').style.display = 'none';
+  if (mode === 'db') fetchDb();
+  else fetchApi();
+}
+
+// ── DB mode: fetch batches from animedb IDs ──
+async function loadDbIds() {
+  if (dbIds.length) return;
+  const r = await fetch(DB_URL);
+  const j = await r.json();
+  dbIds = j.ids || [];
+}
+
+async function fetchDb() {
+  const q     = document.getElementById('searchInput').value.trim();
+  const genre = document.getElementById('genreFilter').value;
+  const year  = parseInt(document.getElementById('yearFilter').value) || null;
+  const fmt   = document.getElementById('fmtFilter').value || null;
+  const status = document.getElementById('statusFilter').value || null;
+  const sort  = document.getElementById('sortFilter').value || 'POPULARITY_DESC';
+
+  // If search/filters set, use AniList browse instead (db mode falls back to API)
+  if (q || genre || year || fmt || status) {
+    await fetchApi(); return;
+  }
+
+  showLoading(true);
+  await loadDbIds();
+
+  const start = dbPage * DB_BATCH;
+  const batch = dbIds.slice(start, start + DB_BATCH);
+  if (!batch.length) { showLoading(false); return; }
+
+  try {
+    const data = await gql(Q.byIds, { ids: batch, page: 1 });
+    const items = data.Page.media;
+    const grid  = document.getElementById('grid');
+    items.forEach(a => grid.append(buildCard(a)));
+    dbPage++;
+
+    const remaining = dbIds.length - (dbPage * DB_BATCH);
+    document.getElementById('resultCount').textContent = `${grid.children.length} of ${dbIds.length} anime`;
+    const wrap = document.getElementById('loadMoreWrap');
+    wrap.style.display = remaining > 0 ? 'flex' : 'none';
+  } catch(e) { console.error(e); }
+  showLoading(false);
+}
+
+// ── API mode: AniList browse/search ─────────
+async function fetchApi() {
+  const q      = document.getElementById('searchInput').value.trim() || null;
+  const genre  = document.getElementById('genreFilter').value;
+  const year   = parseInt(document.getElementById('yearFilter').value) || null;
+  const fmt    = document.getElementById('fmtFilter').value || null;
+  const status = document.getElementById('statusFilter').value || null;
+  const sort   = [document.getElementById('sortFilter').value || 'POPULARITY_DESC'];
+
+  const isSearch = !!q;
+  const query    = isSearch ? Q.search : Q.browse;
+  const vars     = {
+    p: apiPage,
+    genres: genre ? [genre] : null,
+    year, fmt, status,
+    sort,
+    s: q,
+  };
+
+  showLoading(true);
+  try {
+    const data  = await gql(query, vars);
+    const page  = data.Page;
+    const items = page.media;
+    const grid  = document.getElementById('grid');
+    items.forEach(a => grid.append(buildCard(a)));
+    apiHasMore  = page.pageInfo.hasNextPage;
+    apiPage++;
+
+    const total = page.pageInfo.total || items.length;
+    document.getElementById('resultCount').textContent = `${grid.children.length}${apiHasMore ? '+' : ''} results`;
+    document.getElementById('loadMoreWrap').style.display = apiHasMore ? 'flex' : 'none';
+  } catch(e) { console.error(e); }
+  showLoading(false);
+}
+
+function loadMore() {
+  if (mode === 'db') fetchDb(); else fetchApi();
+}
+
+function showLoading(on) {
+  document.getElementById('loadingState').style.display = on ? 'flex' : 'none';
+}
+
+// ── Boot ─────────────────────────────────────
+skeletons(24, document.getElementById('grid'));
+loadDbIds().then(() => {
+  document.getElementById('grid').innerHTML = '';
+  fetchDb();
+});
+</script>
+</body>
+</html>

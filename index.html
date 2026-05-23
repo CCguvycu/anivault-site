@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AniVault — 3,000+ Anime to Watch</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="Stream 3,000+ anime free. No ads, no signup required.">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">⬡ AniVault</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="watchlist.html">Watchlist</a>
+  </div>
+  <div class="nav-search">
+    <span>🔍</span>
+    <input type="text" id="navSearch" placeholder="Search 3,000+ anime…" autocomplete="off">
+  </div>
+</nav>
+
+<div class="page">
+  <!-- HERO -->
+  <div class="hero" id="hero">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-grad"></div>
+    <div class="hero-content" id="heroContent">
+      <div class="hero-badge">🔥 TRENDING NOW</div>
+      <div class="hero-title" id="heroTitle">Loading…</div>
+      <div class="hero-meta" id="heroMeta"></div>
+      <div class="hero-desc" id="heroDesc"></div>
+      <div class="hero-btns" id="heroBtns"></div>
+    </div>
+    <div class="hero-dots" id="heroDots"></div>
+  </div>
+
+  <div class="content">
+    <!-- Continue Watching -->
+    <section class="row-section" id="continueSection" style="display:none">
+      <h2 class="row-title">Continue Watching</h2>
+      <div class="card-row" id="continueRow"></div>
+    </section>
+
+    <!-- Trending -->
+    <section class="row-section">
+      <h2 class="row-title">Trending Now <a href="browse.html?sort=TRENDING_DESC">See all →</a></h2>
+      <div class="card-row" id="trendingRow"></div>
+    </section>
+
+    <!-- This Season -->
+    <section class="row-section">
+      <h2 class="row-title">This Season <a href="browse.html?sort=POPULARITY_DESC">See all →</a></h2>
+      <div class="card-row" id="seasonRow"></div>
+    </section>
+
+    <!-- Top Rated -->
+    <section class="row-section">
+      <h2 class="row-title">Top Rated <a href="browse.html?sort=SCORE_DESC">See all →</a></h2>
+      <div class="card-row" id="topRow"></div>
+    </section>
+
+    <!-- Popular All Time -->
+    <section class="row-section">
+      <h2 class="row-title">Most Popular <a href="browse.html?sort=POPULARITY_DESC">See all →</a></h2>
+      <div class="card-row" id="popularRow"></div>
+    </section>
+
+    <!-- Genre quick-links -->
+    <section class="row-section">
+      <h2 class="row-title">Browse by Genre</h2>
+      <div id="genreLinks" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
+    </section>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const GENRES = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mecha','Music','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Thriller'];
+const FEATURED = [21, 16498, 5114, 9253, 38000, 1535, 11061, 20, 32281, 30276];
+
+let heroAnimes = [];
+let heroCur = 0;
+let heroTimer;
+
+// ── Continue Watching ────────────────────────
+function loadContinue() {
+  const hist = S.history().slice(0, 10);
+  if (!hist.length) return;
+  const sec = document.getElementById('continueSection');
+  const row = document.getElementById('continueRow');
+  sec.style.display = '';
+  hist.forEach(h => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = () => P.go('watch.html', { id: h.id, ep: h.ep });
+    card.innerHTML = `
+      <div class="card-img-wrap">
+        <img class="card-img" src="${h.img}" alt="${h.title}" loading="lazy">
+        <div class="card-prog">EP ${h.ep}</div>
+        <div class="card-overlay"><button class="card-play">▶ Resume</button></div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">${h.title}</div>
+        <div class="card-meta"><span class="badge ep">Episode ${h.ep}</span></div>
+      </div>`;
+    row.append(card);
+  });
+}
+
+// ── Hero carousel ────────────────────────────
+function setHero(a) {
+  document.getElementById('heroBg').style.backgroundImage = `url('${a.bannerImage || a.coverImage.extraLarge}')`;
+  document.getElementById('heroTitle').textContent = a.title.english || a.title.romaji;
+  document.getElementById('heroMeta').innerHTML = `
+    <span class="hero-score">★ ${a.averageScore ? (a.averageScore/10).toFixed(1) : '—'}</span>
+    <span class="dot">·</span>
+    <span>${a.seasonYear || '—'}</span>
+    <span class="dot">·</span>
+    <span>${a.format || '—'}</span>
+    <span class="dot">·</span>
+    <span>${a.episodes ? a.episodes + ' ep' : 'Ongoing'}</span>`;
+  document.getElementById('heroDesc').textContent = (a.description || '').replace(/<[^>]+>/g, '').slice(0, 220) + '…';
+  document.getElementById('heroBtns').innerHTML = `
+    <button class="btn btn-primary" onclick="P.go('watch.html',{id:${a.id},ep:1})">▶ Watch Now</button>
+    <button class="btn btn-ghost" onclick="P.go('anime.html',{id:${a.id}})">ℹ Details</button>`;
+
+  const dots = document.getElementById('heroDots');
+  [...dots.children].forEach((d,i) => d.classList.toggle('active', i === heroCur));
+}
+
+function nextHero() {
+  heroCur = (heroCur + 1) % heroAnimes.length;
+  setHero(heroAnimes[heroCur]);
+}
+
+async function loadHero() {
+  try {
+    const data = await gql(Q.trending);
+    heroAnimes = data.Page.media.filter(a => a.bannerImage).slice(0, 6);
+    if (!heroAnimes.length) heroAnimes = data.Page.media.slice(0, 6);
+
+    const dots = document.getElementById('heroDots');
+    heroAnimes.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'hero-dot' + (i === 0 ? ' active' : '');
+      d.onclick = () => { heroCur = i; setHero(heroAnimes[i]); resetTimer(); };
+      dots.append(d);
+    });
+
+    setHero(heroAnimes[0]);
+    resetTimer();
+  } catch(e) { console.error(e); }
+}
+
+function resetTimer() {
+  clearInterval(heroTimer);
+  heroTimer = setInterval(nextHero, 6000);
+}
+
+// ── Genre links ──────────────────────────────
+function buildGenreLinks() {
+  const wrap = document.getElementById('genreLinks');
+  GENRES.forEach(g => {
+    const a = document.createElement('a');
+    a.href = `browse.html?genre=${encodeURIComponent(g)}`;
+    a.className = 'genre-tag';
+    a.textContent = g;
+    wrap.append(a);
+  });
+}
+
+// ── Nav search ───────────────────────────────
+document.getElementById('navSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim())
+    P.go('browse.html', { q: e.target.value.trim() });
+});
+
+// ── Boot ─────────────────────────────────────
+(async () => {
+  loadContinue();
+  buildGenreLinks();
+
+  const rows = [
+    { query: Q.trending,                  id: 'trendingRow',  key: 'Page' },
+    { query: Q.seasonal, vars: { s: currentSeason(), y: new Date().getFullYear() }, id: 'seasonRow', key: 'Page' },
+    { query: Q.topRated,                  id: 'topRow',       key: 'Page' },
+    { query: Q.popular,                   id: 'popularRow',   key: 'Page' },
+  ];
+
+  rows.forEach(r => skeletons(8, document.getElementById(r.id)));
+  loadHero();
+
+  for (const r of rows) {
+    try {
+      const data = await gql(r.query, r.vars || {});
+      const row = document.getElementById(r.id);
+      row.innerHTML = '';
+      data.Page.media.forEach(a => row.append(buildCard(a)));
+    } catch(e) { console.error(e); }
+  }
+})();
+</script>
+</body>
+</html>

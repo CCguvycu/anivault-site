@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watchlist — AniVault</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-logo">⬡ AniVault</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="watchlist.html">Watchlist</a>
+  </div>
+  <div class="nav-search">
+    <span>🔍</span>
+    <input type="text" id="navSearch" placeholder="Search anime…" autocomplete="off">
+  </div>
+</nav>
+
+<div class="grid-page">
+  <div class="page-header">
+    <h1>My Watchlist</h1>
+    <p id="wlSubtitle">Your saved anime</p>
+  </div>
+
+  <div id="historySection">
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
+      <span style="width:3px;height:16px;border-radius:2px;background:linear-gradient(to bottom,var(--p2),var(--blue));display:inline-block"></span>
+      Continue Watching
+    </h2>
+    <div class="wl-grid" id="histGrid"></div>
+  </div>
+
+  <div style="margin-top:2rem" id="wlSection">
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
+      <span style="width:3px;height:16px;border-radius:2px;background:linear-gradient(to bottom,var(--pink),var(--amber));display:inline-block"></span>
+      Saved Anime
+    </h2>
+    <div class="wl-grid" id="wlGrid"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+document.getElementById('navSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim())
+    P.go('browse.html', { q: e.target.value.trim() });
+});
+
+function histCard(h) {
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.onclick = () => P.go('watch.html', { id: h.id, ep: h.ep });
+  d.innerHTML = `
+    <div class="card-img-wrap">
+      <img class="card-img" src="${h.img}" alt="${h.title}" loading="lazy">
+      <div class="card-prog">EP ${h.ep}</div>
+      <div class="card-overlay"><button class="card-play">▶ Resume</button></div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">${h.title}</div>
+      <div class="card-meta">
+        <span class="badge ep">Episode ${h.ep}</span>
+        <span class="badge" style="background:rgba(100,116,139,.1);color:var(--dim)">${new Date(h.ts).toLocaleDateString()}</span>
+      </div>
+    </div>`;
+  return d;
+}
+
+function wlCard(w) {
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.onclick = () => P.go('anime.html', { id: w.id });
+  d.innerHTML = `
+    <div class="card-img-wrap">
+      <img class="card-img" src="${w.img}" alt="${w.title}" loading="lazy">
+      <div class="card-overlay">
+        <button class="card-play" onclick="event.stopPropagation();P.go('watch.html',{id:${w.id},ep:1})">▶ Watch</button>
+        <button class="card-wl active" onclick="event.stopPropagation();removeWl(${w.id},this.closest('.card'))" title="Remove">♥</button>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">${w.title}</div>
+      <div class="card-meta"><span class="badge" style="background:rgba(244,63,94,.1);color:#f43f5e">♥ Saved</span></div>
+    </div>`;
+  return d;
+}
+
+function removeWl(id, card) {
+  S.removeFromWl(id);
+  card.remove();
+  updateSubtitle();
+}
+
+function updateSubtitle() {
+  const wl = S.watchlist();
+  document.getElementById('wlSubtitle').textContent = `${wl.length} saved · ${S.history().length} in history`;
+}
+
+function render() {
+  const hist    = S.history();
+  const wl      = S.watchlist();
+  const histGrid = document.getElementById('histGrid');
+  const wlGrid   = document.getElementById('wlGrid');
+
+  if (!hist.length) {
+    document.getElementById('historySection').innerHTML = '';
+  } else {
+    hist.forEach(h => histGrid.append(histCard(h)));
+  }
+
+  if (!wl.length) {
+    document.getElementById('wlSection').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">♥</div>
+        <p>Your watchlist is empty.</p>
+        <p style="font-size:.85rem"><a href="browse.html" style="color:var(--p3)">Browse 3,000+ anime →</a></p>
+      </div>`;
+  } else {
+    wl.forEach(w => wlGrid.append(wlCard(w)));
+  }
+
+  updateSubtitle();
+}
+
+render();
+</script>
+</body>
+</html>

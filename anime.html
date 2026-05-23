@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anime — AniVault</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-logo">⬡ AniVault</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="watchlist.html">Watchlist</a>
+  </div>
+  <div class="nav-search">
+    <span>🔍</span>
+    <input type="text" id="navSearch" placeholder="Search anime…" autocomplete="off">
+  </div>
+</nav>
+
+<div class="detail-page" id="detailPage">
+  <!-- Banner -->
+  <div class="detail-banner" id="detailBanner">
+    <img id="bannerImg" src="" alt="" style="display:none">
+  </div>
+
+  <div class="detail-main" id="detailMain">
+    <!-- Poster + actions -->
+    <div class="detail-poster" id="posterCol">
+      <img id="posterImg" src="" alt="">
+      <button class="btn btn-primary" id="watchBtn">▶ Watch Now</button>
+      <button class="btn detail-wl" id="wlBtn">♥ Add to Watchlist</button>
+      <div style="margin-top:.75rem;font-size:.8rem;color:var(--dim)" id="progressInfo"></div>
+    </div>
+
+    <!-- Info -->
+    <div class="detail-info" id="infoCol">
+      <div style="height:80px"></div>
+      <h1 id="titleEl">Loading…</h1>
+      <div class="detail-native" id="nativeEl"></div>
+      <div class="detail-stats" id="statsEl"></div>
+      <div class="detail-genres" id="genresEl"></div>
+      <p class="detail-desc collapsed" id="descEl"></p>
+      <button class="toggle-desc" id="toggleDesc" onclick="toggleDesc()">Show more ↓</button>
+
+      <!-- Studios / trailer -->
+      <div id="studioEl" style="font-size:.85rem;color:var(--dim);margin-bottom:1.25rem"></div>
+
+      <!-- Episodes -->
+      <div id="epSection" style="display:none">
+        <div class="section-title">Episodes <span id="epCountBadge" style="font-size:.8rem;color:var(--dim);margin-left:.5rem;font-weight:400"></span></div>
+        <div class="ep-grid" id="epGrid"></div>
+      </div>
+
+      <!-- Characters -->
+      <div id="charSection" style="display:none">
+        <div class="section-title">Characters</div>
+        <div class="char-row" id="charRow"></div>
+      </div>
+
+      <!-- Relations -->
+      <div id="relSection" style="display:none">
+        <div class="section-title">Related</div>
+        <div class="rec-row" id="relRow"></div>
+      </div>
+
+      <!-- Recommendations -->
+      <div id="recSection" style="display:none">
+        <div class="section-title">You Might Like</div>
+        <div class="rec-row" id="recRow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let anime = null;
+const id  = parseInt(P.get('id'));
+
+document.getElementById('navSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim())
+    P.go('browse.html', { q: e.target.value.trim() });
+});
+
+function toggleDesc() {
+  const d = document.getElementById('descEl');
+  const btn = document.getElementById('toggleDesc');
+  d.classList.toggle('collapsed');
+  btn.textContent = d.classList.contains('collapsed') ? 'Show more ↓' : 'Show less ↑';
+}
+
+function buildEpisodes(total, animeId) {
+  const sec = document.getElementById('epSection');
+  if (!total) return;
+  sec.style.display = '';
+  document.getElementById('epCountBadge').textContent = `${total} episodes`;
+  const grid = document.getElementById('epGrid');
+  const prog = S.progress(animeId);
+  for (let i = 1; i <= total; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'ep-btn' + (prog.eps.includes(i) ? ' watched' : '') + (prog.last === i ? ' current' : '');
+    btn.textContent = i;
+    btn.onclick = () => P.go('watch.html', { id: animeId, ep: i });
+    grid.append(btn);
+  }
+}
+
+function buildChars(chars) {
+  if (!chars?.nodes?.length) return;
+  document.getElementById('charSection').style.display = '';
+  const row = document.getElementById('charRow');
+  chars.nodes.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'char-card';
+    card.innerHTML = `<img src="${c.image.large}" alt="${c.name.full}" loading="lazy"><div class="char-name">${c.name.full}</div>`;
+    row.append(card);
+  });
+}
+
+function buildRelated(relations) {
+  const edges = (relations?.edges || []).filter(e => ['SEQUEL','PREQUEL','SIDE_STORY','PARENT'].includes(e.relationType));
+  if (!edges.length) return;
+  document.getElementById('relSection').style.display = '';
+  const row = document.getElementById('relRow');
+  edges.forEach(e => {
+    const n = e.node;
+    if (n.type !== 'ANIME') return;
+    const card = document.createElement('div');
+    card.className = 'rec-card';
+    card.onclick = () => P.go('anime.html', { id: n.id });
+    card.innerHTML = `<img src="${n.coverImage.large}" alt="" loading="lazy"><div class="rec-title">${n.title.romaji}</div>`;
+    row.append(card);
+  });
+  if (!row.children.length) document.getElementById('relSection').style.display = 'none';
+}
+
+function buildRecs(recs) {
+  const nodes = (recs?.nodes || []).filter(n => n.mediaRecommendation);
+  if (!nodes.length) return;
+  document.getElementById('recSection').style.display = '';
+  const row = document.getElementById('recRow');
+  nodes.forEach(n => {
+    const m = n.mediaRecommendation;
+    const card = document.createElement('div');
+    card.className = 'rec-card';
+    card.onclick = () => P.go('anime.html', { id: m.id });
+    card.innerHTML = `<img src="${m.coverImage.large}" alt="" loading="lazy"><div class="rec-title">${m.title.romaji}</div>`;
+    row.append(card);
+  });
+}
+
+async function load() {
+  if (!id) { document.getElementById('titleEl').textContent = 'No anime ID provided.'; return; }
+  try {
+    const data = await gql(Q.detail, { id });
+    anime = data.Media;
+    document.title = `${anime.title.english || anime.title.romaji} — AniVault`;
+
+    // Banner
+    if (anime.bannerImage) {
+      const img = document.getElementById('bannerImg');
+      img.src = anime.bannerImage; img.style.display = '';
+    } else {
+      document.getElementById('detailBanner').style.background = `linear-gradient(135deg, #${(anime.coverImage.color || '7c3aed').replace('#','')}44, var(--surf))`;
+    }
+
+    // Poster
+    document.getElementById('posterImg').src = anime.coverImage.extraLarge || anime.coverImage.large;
+    document.getElementById('posterImg').alt = anime.title.romaji;
+
+    // Watch button
+    const prog = S.progress(id);
+    const ep   = prog.last || 1;
+    const watchBtn = document.getElementById('watchBtn');
+    watchBtn.textContent = prog.last ? `▶ Continue EP ${ep}` : '▶ Watch Now';
+    watchBtn.onclick = () => P.go('watch.html', { id, ep });
+
+    if (prog.last) {
+      document.getElementById('progressInfo').textContent = `Progress: EP ${prog.last}${anime.episodes ? ' / ' + anime.episodes : ''}`;
+    }
+
+    // Watchlist
+    const wlBtn = document.getElementById('wlBtn');
+    wlBtn.classList.toggle('active', S.inWl(id));
+    wlBtn.textContent = S.inWl(id) ? '♥ In Watchlist' : '♥ Add to Watchlist';
+    wlBtn.onclick = () => {
+      S.inWl(id) ? S.removeFromWl(id) : S.addToWl(anime);
+      wlBtn.classList.toggle('active', S.inWl(id));
+      wlBtn.textContent = S.inWl(id) ? '♥ In Watchlist' : '♥ Add to Watchlist';
+    };
+
+    // Title + native
+    document.getElementById('titleEl').textContent = anime.title.english || anime.title.romaji;
+    if (anime.title.native) document.getElementById('nativeEl').textContent = anime.title.native;
+
+    // Stats
+    const stats = [
+      { icon: '★', label: anime.averageScore ? (anime.averageScore/10).toFixed(1) + ' / 10' : 'N/A' },
+      { icon: '📺', label: anime.episodes ? anime.episodes + ' episodes' : 'Ongoing' },
+      { icon: '📅', label: [anime.season, anime.seasonYear].filter(Boolean).join(' ') || 'Unknown' },
+      { icon: '🎬', label: (anime.format || '—').replace('_',' ') },
+      { icon: '⚡', label: anime.status?.replace('_',' ') || '—' },
+      { icon: '🔥', label: (anime.popularity || 0).toLocaleString() + ' users' },
+    ];
+    document.getElementById('statsEl').innerHTML = stats.map(s => `<div class="stat-pill"><span class="icon">${s.icon}</span>${s.label}</div>`).join('');
+
+    // Genres
+    document.getElementById('genresEl').innerHTML = (anime.genres || []).map(g => `<a class="genre-tag" href="browse.html?genre=${encodeURIComponent(g)}">${g}</a>`).join('');
+
+    // Description
+    const desc = (anime.description || 'No description available.').replace(/<[^>]+>/g, '');
+    document.getElementById('descEl').textContent = desc;
+    if (desc.length < 300) document.getElementById('toggleDesc').style.display = 'none';
+
+    // Studio
+    const studios = (anime.studios?.nodes || []).map(s => s.name).join(', ');
+    if (studios) document.getElementById('studioEl').innerHTML = `<strong style="color:var(--text)">Studio:</strong> ${studios}`;
+
+    // Episodes, chars, relations, recs
+    buildEpisodes(anime.episodes || (anime.status === 'RELEASING' ? anime.nextAiringEpisode?.episode - 1 : null), id);
+    buildChars(anime.characters);
+    buildRelated(anime.relations);
+    buildRecs(anime.recommendations);
+
+  } catch(e) {
+    document.getElementById('titleEl').textContent = 'Failed to load anime.';
+    console.error(e);
+  }
+}
+
+load();
+</script>
+</body>
+</html>
