@@ -3,207 +3,253 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AniVault — 3,000+ Anime to Watch</title>
+  <title>AniVault — Stream 3,000+ Anime Free</title>
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <meta name="description" content="Stream 3,000+ anime free. No ads, no signup required.">
+  <meta name="description" content="Stream over 3,000 anime free in HD. No ads, no signup. AutoEmbed, VidBinge, VidLink and more.">
 </head>
 <body>
 
-<!-- NAV -->
 <nav class="nav">
-  <a href="index.html" class="nav-logo">⬡ AniVault</a>
+  <a href="index.html" class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="16,2 30,9 30,23 16,30 2,23 2,9" fill="url(#lg)"/>
+      <polygon points="12,11 22,16 12,21" fill="white" opacity=".9"/>
+      <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs>
+    </svg>
+    AniVault
+  </a>
   <div class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="browse.html">Browse</a>
-    <a href="watchlist.html">Watchlist</a>
+    <a href="index.html" class="nav-link">Home</a>
+    <a href="browse.html" class="nav-link">Browse</a>
+    <a href="browse.html?sort=TRENDING_DESC" class="nav-link">Trending</a>
+    <a href="browse.html?sort=SCORE_DESC" class="nav-link">Top Rated</a>
+    <a href="watchlist.html" class="nav-link">My List</a>
   </div>
-  <div class="nav-search">
-    <span>🔍</span>
-    <input type="text" id="navSearch" placeholder="Search 3,000+ anime…" autocomplete="off">
+  <div class="nav-search-wrap">
+    <div class="nav-search">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="globalSearch" type="text" placeholder="Search 3,000+ anime…" autocomplete="off">
+    </div>
+    <div class="search-drop" id="searchDrop"></div>
   </div>
 </nav>
 
-<div class="page">
-  <!-- HERO -->
-  <div class="hero" id="hero">
-    <div class="hero-bg" id="heroBg"></div>
-    <div class="hero-grad"></div>
-    <div class="hero-content" id="heroContent">
-      <div class="hero-badge">🔥 TRENDING NOW</div>
-      <div class="hero-title" id="heroTitle">Loading…</div>
-      <div class="hero-meta" id="heroMeta"></div>
-      <div class="hero-desc" id="heroDesc"></div>
-      <div class="hero-btns" id="heroBtns"></div>
-    </div>
-    <div class="hero-dots" id="heroDots"></div>
+<!-- HERO -->
+<div class="hero" id="hero">
+  <div class="hero-bg" id="heroBg"></div>
+  <div class="hero-noise"></div>
+  <div class="hero-content" id="heroContent">
+    <div class="hero-eyebrow" id="heroEyebrow"></div>
+    <h1 class="hero-title" id="heroTitle">Loading…</h1>
+    <div class="hero-meta" id="heroMeta"></div>
+    <p class="hero-desc" id="heroDesc"></p>
+    <div class="hero-actions" id="heroActions"></div>
   </div>
+  <div class="hero-thumbs" id="heroThumbs"></div>
+  <div class="hero-prog"><div class="hero-prog-fill" id="heroProgFill"></div></div>
+</div>
 
+<div class="page">
   <div class="content">
-    <!-- Continue Watching -->
+    <!-- Continue watching -->
     <section class="row-section" id="continueSection" style="display:none">
-      <h2 class="row-title">Continue Watching</h2>
-      <div class="card-row" id="continueRow"></div>
+      <div class="row-head">
+        <h2 class="row-title">Continue Watching</h2>
+      </div>
+      <div class="scroll-row" id="continueRow"></div>
     </section>
 
-    <!-- Trending -->
-    <section class="row-section">
-      <h2 class="row-title">Trending Now <a href="browse.html?sort=TRENDING_DESC">See all →</a></h2>
-      <div class="card-row" id="trendingRow"></div>
-    </section>
+    <!-- Dynamic rows (injected by JS) -->
+    <div id="rows"></div>
 
-    <!-- This Season -->
+    <!-- Genre grid -->
     <section class="row-section">
-      <h2 class="row-title">This Season <a href="browse.html?sort=POPULARITY_DESC">See all →</a></h2>
-      <div class="card-row" id="seasonRow"></div>
-    </section>
-
-    <!-- Top Rated -->
-    <section class="row-section">
-      <h2 class="row-title">Top Rated <a href="browse.html?sort=SCORE_DESC">See all →</a></h2>
-      <div class="card-row" id="topRow"></div>
-    </section>
-
-    <!-- Popular All Time -->
-    <section class="row-section">
-      <h2 class="row-title">Most Popular <a href="browse.html?sort=POPULARITY_DESC">See all →</a></h2>
-      <div class="card-row" id="popularRow"></div>
-    </section>
-
-    <!-- Genre quick-links -->
-    <section class="row-section">
-      <h2 class="row-title">Browse by Genre</h2>
-      <div id="genreLinks" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
+      <div class="row-head">
+        <h2 class="row-title">Browse by Genre</h2>
+      </div>
+      <div class="genre-grid" id="genreGrid"></div>
     </section>
   </div>
 </div>
 
 <script src="app.js"></script>
 <script>
-const GENRES = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mecha','Music','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Thriller'];
-const FEATURED = [21, 16498, 5114, 9253, 38000, 1535, 11061, 20, 32281, 30276];
+const GENRES = [
+  { name:'Action',        icon:'⚔️' },
+  { name:'Adventure',     icon:'🗺️' },
+  { name:'Comedy',        icon:'😂' },
+  { name:'Drama',         icon:'🎭' },
+  { name:'Fantasy',       icon:'🧙' },
+  { name:'Horror',        icon:'💀' },
+  { name:'Mecha',         icon:'🤖' },
+  { name:'Music',         icon:'🎵' },
+  { name:'Mystery',       icon:'🔍' },
+  { name:'Psychological', icon:'🧠' },
+  { name:'Romance',       icon:'💕' },
+  { name:'Sci-Fi',        icon:'🚀' },
+  { name:'Slice of Life', icon:'🌸' },
+  { name:'Sports',        icon:'⚡' },
+  { name:'Supernatural',  icon:'✨' },
+  { name:'Thriller',      icon:'🎯' },
+];
 
-let heroAnimes = [];
-let heroCur = 0;
-let heroTimer;
+// ── Hero carousel ─────────────────────────────────────
+let featured = [], hIdx = 0, hTimer, hProg = 0, hProgTimer;
 
-// ── Continue Watching ────────────────────────
-function loadContinue() {
-  const hist = S.history().slice(0, 10);
-  if (!hist.length) return;
-  const sec = document.getElementById('continueSection');
-  const row = document.getElementById('continueRow');
-  sec.style.display = '';
-  hist.forEach(h => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.onclick = () => P.go('watch.html', { id: h.id, ep: h.ep });
-    card.innerHTML = `
-      <div class="card-img-wrap">
-        <img class="card-img" src="${h.img}" alt="${h.title}" loading="lazy">
-        <div class="card-prog">EP ${h.ep}</div>
-        <div class="card-overlay"><button class="card-play">▶ Resume</button></div>
-      </div>
-      <div class="card-info">
-        <div class="card-title">${h.title}</div>
-        <div class="card-meta"><span class="badge ep">Episode ${h.ep}</span></div>
-      </div>`;
-    row.append(card);
+function setHero(a, animate) {
+  const bg    = document.getElementById('heroBg');
+  const title = document.getElementById('heroTitle');
+  const meta  = document.getElementById('heroMeta');
+  const desc  = document.getElementById('heroDesc');
+  const eye   = document.getElementById('heroEyebrow');
+  const acts  = document.getElementById('heroActions');
+  const thumbs= document.getElementById('heroThumbs');
+
+  bg.style.backgroundImage = `url('${a.bannerImage || a.coverImage.extraLarge}')`;
+
+  eye.innerHTML = `
+    <span class="hero-badge rank">🔥 #${hIdx+1} Trending</span>
+    ${a.status==='RELEASING'?'<span class="hero-badge airing">● Airing</span>':''}
+    ${a.genres?.[0]?`<span class="hero-badge genre">${a.genres[0]}</span>`:''}`;
+
+  title.textContent  = a.title.english || a.title.romaji;
+  document.title     = `${title.textContent} — AniVault`;
+
+  const score = a.averageScore ? (a.averageScore/10).toFixed(1) : null;
+  meta.innerHTML = `
+    ${score?`<span class="score">★ ${score}</span><span class="sep">·</span>`:''}
+    <span>${a.seasonYear||'—'}</span>
+    <span class="sep">·</span>
+    <span>${a.format?.replace('_',' ')||'Anime'}</span>
+    <span class="sep">·</span>
+    <span>${a.episodes?a.episodes+' episodes':'Ongoing'}</span>`;
+
+  desc.textContent = (a.description||'').replace(/<[^>]+>/g,'').slice(0, 280) + '…';
+
+  acts.innerHTML = '';
+  const play = document.createElement('button');
+  play.className = 'btn-watch';
+  play.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch Now`;
+  play.onclick = () => P.go('watch.html', { id: a.id, ep: S.progress(a.id).last||1 });
+  const info = document.createElement('button');
+  info.className = 'btn-info';
+  info.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> Details`;
+  info.onclick = () => P.go('anime.html', { id: a.id });
+  const wlBtn = document.createElement('button');
+  wlBtn.className = 'btn-add-wl' + (S.inWl(a.id)?' in-wl':'');
+  wlBtn.title = 'Toggle watchlist';
+  wlBtn.textContent = S.inWl(a.id) ? '♥' : '♡';
+  wlBtn.onclick = () => {
+    S.toggleWl(a);
+    wlBtn.textContent = S.inWl(a.id)?'♥':'♡';
+    wlBtn.classList.toggle('in-wl', S.inWl(a.id));
+    toast(S.inWl(a.id)?'Added to watchlist':'Removed', S.inWl(a.id)?'success':'info');
+  };
+  acts.append(play, info, wlBtn);
+
+  // Thumbs
+  thumbs.innerHTML = '';
+  featured.forEach((f,i) => {
+    const d = document.createElement('div');
+    d.className = 'hero-thumb' + (i===hIdx?' active':'');
+    d.innerHTML = `<img src="${f.coverImage.large}" alt="">`;
+    d.onclick = () => { hIdx = i; setHero(featured[i]); resetProg(); };
+    thumbs.append(d);
   });
 }
 
-// ── Hero carousel ────────────────────────────
-function setHero(a) {
-  document.getElementById('heroBg').style.backgroundImage = `url('${a.bannerImage || a.coverImage.extraLarge}')`;
-  document.getElementById('heroTitle').textContent = a.title.english || a.title.romaji;
-  document.getElementById('heroMeta').innerHTML = `
-    <span class="hero-score">★ ${a.averageScore ? (a.averageScore/10).toFixed(1) : '—'}</span>
-    <span class="dot">·</span>
-    <span>${a.seasonYear || '—'}</span>
-    <span class="dot">·</span>
-    <span>${a.format || '—'}</span>
-    <span class="dot">·</span>
-    <span>${a.episodes ? a.episodes + ' ep' : 'Ongoing'}</span>`;
-  document.getElementById('heroDesc').textContent = (a.description || '').replace(/<[^>]+>/g, '').slice(0, 220) + '…';
-  document.getElementById('heroBtns').innerHTML = `
-    <button class="btn btn-primary" onclick="P.go('watch.html',{id:${a.id},ep:1})">▶ Watch Now</button>
-    <button class="btn btn-ghost" onclick="P.go('anime.html',{id:${a.id}})">ℹ Details</button>`;
-
-  const dots = document.getElementById('heroDots');
-  [...dots.children].forEach((d,i) => d.classList.toggle('active', i === heroCur));
+function nextHero() {
+  hIdx = (hIdx + 1) % featured.length;
+  setHero(featured[hIdx]);
+  resetProg();
 }
 
-function nextHero() {
-  heroCur = (heroCur + 1) % heroAnimes.length;
-  setHero(heroAnimes[heroCur]);
+function resetProg() {
+  clearInterval(hProgTimer); hProg = 0;
+  document.getElementById('heroProgFill').style.width = '0%';
+  const total = 6000, step = 50;
+  hProgTimer = setInterval(() => {
+    hProg += step;
+    document.getElementById('heroProgFill').style.width = (hProg/total*100)+'%';
+    if (hProg >= total) { clearInterval(hProgTimer); nextHero(); }
+  }, step);
 }
 
 async function loadHero() {
   try {
-    const data = await gql(Q.trending);
-    heroAnimes = data.Page.media.filter(a => a.bannerImage).slice(0, 6);
-    if (!heroAnimes.length) heroAnimes = data.Page.media.slice(0, 6);
-
-    const dots = document.getElementById('heroDots');
-    heroAnimes.forEach((_, i) => {
-      const d = document.createElement('div');
-      d.className = 'hero-dot' + (i === 0 ? ' active' : '');
-      d.onclick = () => { heroCur = i; setHero(heroAnimes[i]); resetTimer(); };
-      dots.append(d);
-    });
-
-    setHero(heroAnimes[0]);
-    resetTimer();
-  } catch(e) { console.error(e); }
+    const d = await gql(Q.trending);
+    featured = d.Page.media.filter(a => a.bannerImage || a.coverImage.extraLarge).slice(0, 8);
+    if (!featured.length) featured = d.Page.media.slice(0, 8);
+    setHero(featured[0]);
+    resetProg();
+  } catch(e) { console.error('Hero failed', e); }
 }
 
-function resetTimer() {
-  clearInterval(heroTimer);
-  heroTimer = setInterval(nextHero, 6000);
-}
-
-// ── Genre links ──────────────────────────────
-function buildGenreLinks() {
-  const wrap = document.getElementById('genreLinks');
-  GENRES.forEach(g => {
-    const a = document.createElement('a');
-    a.href = `browse.html?genre=${encodeURIComponent(g)}`;
-    a.className = 'genre-tag';
-    a.textContent = g;
-    wrap.append(a);
+// ── Continue watching ─────────────────────────────────
+function loadContinue() {
+  const hist = S.history().slice(0, 12);
+  if (!hist.length) return;
+  document.getElementById('continueSection').style.display = '';
+  const row = document.getElementById('continueRow');
+  hist.forEach(h => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--accent', h.color || '#7c3aed');
+    card.innerHTML = `
+      <div class="card-media">
+        <img class="card-img" src="${h.img}" alt="${h.title}" loading="lazy">
+        <div class="card-resume-badge">EP ${h.ep}</div>
+        <div class="card-hover">
+          <div class="card-hover-inner">
+            <button class="card-play-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+              Resume EP ${h.ep}
+            </button>
+          </div>
+        </div>
+        <div class="card-bottom-grad">
+          <div class="card-title-text">${h.title}</div>
+        </div>
+      </div>
+      <div class="card-tags"></div>`;
+    card.onclick = () => P.go('watch.html', { id: h.id, ep: h.ep });
+    row.append(card);
   });
 }
 
-// ── Nav search ───────────────────────────────
-document.getElementById('navSearch').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target.value.trim())
-    P.go('browse.html', { q: e.target.value.trim() });
-});
+// ── Genre grid ────────────────────────────────────────
+function buildGenreGrid() {
+  const grid = document.getElementById('genreGrid');
+  GENRES.forEach(g => {
+    const card = document.createElement('a');
+    card.className = 'genre-card';
+    card.href = `browse.html?genre=${encodeURIComponent(g.name)}`;
+    card.innerHTML = `<span class="g-icon">${g.icon}</span>${g.name}`;
+    grid.append(card);
+  });
+}
 
-// ── Boot ─────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────
 (async () => {
   loadContinue();
-  buildGenreLinks();
-
-  const rows = [
-    { query: Q.trending,                  id: 'trendingRow',  key: 'Page' },
-    { query: Q.seasonal, vars: { s: currentSeason(), y: new Date().getFullYear() }, id: 'seasonRow', key: 'Page' },
-    { query: Q.topRated,                  id: 'topRow',       key: 'Page' },
-    { query: Q.popular,                   id: 'popularRow',   key: 'Page' },
-  ];
-
-  rows.forEach(r => skeletons(8, document.getElementById(r.id)));
+  buildGenreGrid();
   loadHero();
 
-  for (const r of rows) {
+  const rows = document.getElementById('rows');
+  const rowDefs = [
+    { label: 'Trending Now',   q: Q.trending,  href: 'browse.html?sort=TRENDING_DESC' },
+    { label: 'This Season',    q: Q.seasonal,  vars: { s: currentSeason(), y: new Date().getFullYear() }, href: 'browse.html' },
+    { label: 'Top Rated',      q: Q.topRated,  href: 'browse.html?sort=SCORE_DESC' },
+    { label: 'Most Popular',   q: Q.popular,   href: 'browse.html?sort=POPULARITY_DESC' },
+    { label: 'New Episodes',   q: Q.newEps,    href: 'browse.html?sort=UPDATED_AT_DESC' },
+  ];
+
+  for (const rd of rowDefs) {
     try {
-      const data = await gql(r.query, r.vars || {});
-      const row = document.getElementById(r.id);
-      row.innerHTML = '';
-      data.Page.media.forEach(a => row.append(buildCard(a)));
-    } catch(e) { console.error(e); }
+      const d = await gql(rd.q, rd.vars||{});
+      buildRow(rd.label, d.Page.media, rows, rd.href);
+    } catch(e) { console.error(rd.label, e); }
   }
 })();
 </script>

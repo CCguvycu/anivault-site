@@ -6,64 +6,83 @@
   <title>Watching — AniVault</title>
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <nav class="nav">
-  <a href="index.html" class="nav-logo">⬡ AniVault</a>
+  <a href="index.html" class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none"><polygon points="16,2 30,9 30,23 16,30 2,23 2,9" fill="url(#lg)"/><polygon points="12,11 22,16 12,21" fill="white" opacity=".9"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs></svg>
+    AniVault
+  </a>
   <div class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="browse.html">Browse</a>
-    <a href="watchlist.html">Watchlist</a>
+    <a href="index.html" class="nav-link">Home</a>
+    <a href="browse.html" class="nav-link">Browse</a>
+    <a href="watchlist.html" class="nav-link">My List</a>
   </div>
-  <div class="nav-search">
-    <span>🔍</span>
-    <input type="text" id="navSearch" placeholder="Search anime…" autocomplete="off">
+  <div class="nav-search-wrap">
+    <div class="nav-search">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="globalSearch" type="text" placeholder="Search anime…" autocomplete="off">
+    </div>
+    <div class="search-drop" id="searchDrop"></div>
   </div>
 </nav>
 
-<div class="watch-page">
-  <!-- Player column -->
+<div class="watch-layout">
+  <!-- Left: player + controls -->
   <div class="watch-main">
-    <div class="watch-title" id="watchTitle">
-      Loading… <span id="watchEpLabel"></span>
-    </div>
-
-    <div class="player-wrap">
+    <div class="player-wrap" id="playerWrap">
       <iframe id="player" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" loading="lazy"></iframe>
+
+      <!-- Auto-play next overlay -->
+      <div class="autoplay-overlay" id="apOverlay">
+        <svg width="0" height="0"><defs><linearGradient id="apGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs></svg>
+        <h3>Next Episode</h3>
+        <p id="apNextLabel">Episode loading…</p>
+        <div class="autoplay-ring">
+          <svg viewBox="0 0 60 60">
+            <circle class="track" cx="30" cy="30" r="26"/>
+            <circle class="fill" id="apCircle" cx="30" cy="30" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+          </svg>
+          <div class="count" id="apCount">8</div>
+        </div>
+        <div class="autoplay-actions">
+          <button class="ctrl-btn primary" id="apPlayNow">Play Now</button>
+          <button class="ctrl-btn" id="apCancel">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <!-- Controls -->
-    <div class="ctrl-bar">
-      <button class="pill" id="prevBtn" disabled onclick="changeEp(-1)">← Prev</button>
-      <button class="pill" id="nextBtn" disabled onclick="changeEp(1)">Next →</button>
-      <button class="pill" id="retryBtn" onclick="loadEp(curEp)">↺ Retry</button>
-      <button class="pill" id="detailBtn">ℹ Details</button>
-      <button class="pill fs-btn" onclick="toggleFs()">⛶ Fullscreen</button>
+    <div class="watch-controls">
+      <div class="ctrl-row">
+        <span class="ctrl-title" id="ctrlTitle">Loading… <span id="ctrlEp"></span></span>
+        <div class="ctrl-sep"></div>
+        <button class="ctrl-btn" id="detailBtn">ℹ Details</button>
+        <button class="ctrl-btn" onclick="toggleFs()">⛶ Fullscreen</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn" id="prevBtn" disabled onclick="go(-1)">← Prev</button>
+        <button class="ctrl-btn" id="nextBtn" disabled onclick="go(1)">Next →</button>
+        <button class="ctrl-btn" onclick="loadEp(curEp)">↺ Retry</button>
+        <div class="ctrl-sep"></div>
+        <span class="ctrl-hint">Shortcuts: ← → next/prev · F fullscreen</span>
+      </div>
+      <div class="src-row">
+        <span>Source:</span>
+        <div id="srcRow"></div>
+      </div>
     </div>
-
-    <!-- Source switcher -->
-    <div class="src-bar">
-      <span>Source:</span>
-      <div id="srcRow"></div>
-    </div>
-
-    <!-- Hint -->
-    <p class="watch-hint">
-      ⟐ If video doesn't load, try a different source above or hit ↺ Retry.
-      AutoEmbed is the most reliable. VidSrc/AniWatch may be geo-restricted.
-    </p>
   </div>
 
-  <!-- Episode sidebar -->
+  <!-- Right: episode list -->
   <div class="ep-sidebar">
     <div class="ep-sidebar-head">
       <span>Episodes</span>
       <span id="epSideCount">—</span>
     </div>
     <div class="ep-list" id="epList">
-      <div style="padding:2rem;text-align:center;color:var(--dim);font-size:.85rem">Loading…</div>
+      <div style="padding:2rem;text-align:center;color:var(--t4)">Loading…</div>
     </div>
   </div>
 </div>
@@ -71,22 +90,19 @@
 <script src="app.js"></script>
 <script>
 const animeId = parseInt(P.get('id'));
-let curEp     = parseInt(P.get('ep')) || 1;
-let curSrc    = S.src();
-let totalEps  = 0;
-let anime     = null;
+let curEp  = parseInt(P.get('ep')) || 1;
+let curSrc = S.src();
+let total  = 0;
+let anime  = null;
+let apTimer, apCountdown;
 
-document.getElementById('navSearch').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target.value.trim())
-    P.go('browse.html', { q: e.target.value.trim() });
-});
-
-// ── Build source buttons ─────────────────────
+// ── Source buttons ─────────────────────────────────────
 function buildSrcs() {
   const row = document.getElementById('srcRow');
+  row.innerHTML = '';
   SOURCES.forEach((s, i) => {
     const btn = document.createElement('button');
-    btn.className = 'src-btn' + (i === curSrc ? ' active' : '');
+    btn.className = 'src-pill' + (i === curSrc ? ' on' : '');
     btn.style.borderColor = i === curSrc ? s.color : '';
     btn.style.color = i === curSrc ? s.color : '';
     btn.textContent = s.name;
@@ -95,68 +111,99 @@ function buildSrcs() {
   });
 }
 
-// ── Load episode into iframe ─────────────────
+// ── Load episode ───────────────────────────────────────
 function loadEp(ep) {
   curEp = ep;
-  const src = SOURCES[curSrc];
-  document.getElementById('player').src = src.url(animeId, ep);
+  clearAutoPlay();
+  document.getElementById('player').src = SOURCES[curSrc].url(animeId, ep);
 
-  // Update URL without reload
   const u = new URL(location.href);
-  u.searchParams.set('ep', ep);
-  history.replaceState(null, '', u.toString());
+  u.searchParams.set('ep', ep); history.replaceState(null, '', u);
 
-  // Progress
   if (anime) {
     S.pushHistory(anime, ep);
     S.saveProgress(animeId, ep);
   }
 
-  // Controls
   document.getElementById('prevBtn').disabled = ep <= 1;
-  document.getElementById('nextBtn').disabled = totalEps ? ep >= totalEps : false;
-  document.getElementById('watchEpLabel').textContent = `— Episode ${ep}`;
+  document.getElementById('nextBtn').disabled = total ? ep >= total : false;
+  document.getElementById('ctrlEp').textContent = `— Episode ${ep}`;
 
-  // Sidebar highlight
+  const title = anime ? (anime.title.english || anime.title.romaji) : 'AniVault';
+  document.title = `EP ${ep} — ${title} — AniVault`;
+
+  // Sidebar sync
   document.querySelectorAll('.ep-item').forEach(el => {
     const n = parseInt(el.dataset.ep);
     el.classList.toggle('active', n === ep);
-    el.classList.toggle('watched', S.watched(animeId, n));
-    el.querySelector('.ep-num').style.color = n === ep ? 'var(--p3)' : S.watched(animeId, n) ? 'var(--green)' : '';
+    el.classList.toggle('done', S.watched(animeId, n) && n !== ep);
+    const dot = el.querySelector('.ep-n');
+    if (dot) dot.style.color = n === ep ? 'var(--p4)' : S.watched(animeId,n) ? 'var(--green)' : '';
   });
+  const active = document.querySelector('.ep-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
-  // Scroll sidebar to active ep
-  const activeEl = document.querySelector('.ep-item.active');
-  if (activeEl) activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  // Auto-play next after some time (simulate episode end — trigger manually or on timer)
+  if (total && ep < total) {
+    setTimeout(() => startAutoPlay(ep + 1), 25 * 60 * 1000); // 25 min
+  }
 }
 
-function changeEp(delta) {
+function go(delta) {
   const next = curEp + delta;
-  if (next < 1 || (totalEps && next > totalEps)) return;
+  if (next < 1 || (total && next > total)) return;
   loadEp(next);
 }
 
 function toggleFs() {
-  const el = document.querySelector('.player-wrap');
-  if (!document.fullscreenElement) el.requestFullscreen();
-  else document.exitFullscreen();
+  const el = document.getElementById('playerWrap');
+  if (!document.fullscreenElement) el.requestFullscreen?.();
+  else document.exitFullscreen?.();
 }
 
-// ── Build episode sidebar ────────────────────
-function buildSidebar(eps) {
-  totalEps = eps;
-  document.getElementById('epSideCount').textContent = eps ? `${eps} episodes` : 'Ongoing';
-  document.getElementById('nextBtn').disabled = eps ? curEp >= eps : false;
+// ── Auto-play next ─────────────────────────────────────
+function startAutoPlay(nextEp) {
+  if (!total || nextEp > total) return;
+  const overlay = document.getElementById('apOverlay');
+  const circle  = document.getElementById('apCircle');
+  const count   = document.getElementById('apCount');
+  const circum  = 163.4;
+  document.getElementById('apNextLabel').textContent = `Episode ${nextEp} is up next`;
+  document.getElementById('apPlayNow').onclick  = () => { clearAutoPlay(); loadEp(nextEp); };
+  document.getElementById('apCancel').onclick   = () => clearAutoPlay();
+  overlay.classList.add('show');
 
-  const list = document.getElementById('epList');
+  let t = 8;
+  count.textContent = t;
+  circle.style.strokeDashoffset = circum;
+
+  apCountdown = setInterval(() => {
+    t--;
+    count.textContent = t;
+    circle.style.strokeDashoffset = circum * (t / 8);
+    if (t <= 0) { clearAutoPlay(); loadEp(nextEp); }
+  }, 1000);
+}
+
+function clearAutoPlay() {
+  clearInterval(apCountdown);
+  document.getElementById('apOverlay').classList.remove('show');
+}
+
+// ── Episode sidebar ────────────────────────────────────
+function buildSidebar(eps) {
+  total = eps;
+  document.getElementById('epSideCount').textContent = eps ? `${eps} eps` : 'Ongoing';
+  document.getElementById('nextBtn').disabled = eps ? curEp >= eps : false;
+  const list  = document.getElementById('epList');
   list.innerHTML = '';
   const count = eps || 100;
   for (let i = 1; i <= count; i++) {
     const item = document.createElement('div');
-    item.className = 'ep-item' + (i === curEp ? ' active' : '') + (S.watched(animeId, i) ? ' watched' : '');
+    item.className = 'ep-item' + (i===curEp?' active':'') + (S.watched(animeId,i)&&i!==curEp?' done':'');
     item.dataset.ep = i;
     item.innerHTML = `
-      <div class="ep-num" style="${i === curEp ? 'color:var(--p3)' : S.watched(animeId,i) ? 'color:var(--green)' : ''}">EP</div>
+      <div class="ep-n" style="${i===curEp?'color:var(--p4)':S.watched(animeId,i)?'color:var(--green)':''}">EP</div>
       <div class="ep-label">Episode ${i}</div>
       <div class="ep-dot"></div>`;
     item.onclick = () => loadEp(i);
@@ -164,30 +211,35 @@ function buildSidebar(eps) {
   }
 }
 
-// ── Boot ─────────────────────────────────────
+// ── Keyboard shortcuts ─────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft')  go(-1);
+  if (e.key === 'f' || e.key === 'F') toggleFs();
+});
+
+// ── Boot ───────────────────────────────────────────────
 async function init() {
   if (!animeId) {
-    document.getElementById('watchTitle').textContent = 'No anime ID. Go back and pick one.';
+    document.getElementById('ctrlTitle').textContent = 'No anime selected.';
     return;
   }
-
   buildSrcs();
   document.getElementById('detailBtn').onclick = () => P.go('anime.html', { id: animeId });
 
   try {
-    const data = await gql(Q.detail, { id: animeId });
-    anime = data.Media;
-    const title = anime.title.english || anime.title.romaji;
-    document.title = `EP ${curEp} — ${title} — AniVault`;
-    document.getElementById('watchTitle').textContent = title;
+    const d = await gql(Q.detail, { id: animeId });
+    anime   = d.Media;
+    const t = anime.title.english || anime.title.romaji;
+    document.getElementById('ctrlTitle').textContent = t;
 
     const eps = anime.episodes || (anime.nextAiringEpisode?.episode ? anime.nextAiringEpisode.episode - 1 : 0);
     buildSidebar(eps);
     loadEp(curEp);
   } catch(e) {
-    document.getElementById('watchTitle').textContent = 'Error loading anime info.';
+    document.getElementById('ctrlTitle').textContent = 'Could not load anime info.';
     loadEp(curEp);
-    console.error(e);
   }
 }
 
